@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rhythm Garden - Interactive Music Adventure</title>
+    <script src="script.js"></script>
     <style>
         * {
             margin: 0;
@@ -649,6 +650,20 @@
             margin-bottom: 15px;
             line-height: 1.6;
         }
+    
+    .plant-slot.locked {
+    background: rgba(0, 0, 0, 0.25);
+    color: #aaa;
+    cursor: not-allowed;
+    border: 2px dashed #444;
+    font-size: 2em;
+    pointer-events: auto;
+}
+.plant-slot.locked:hover {
+    box-shadow: none;
+    transform: none;
+}
+
     </style>
 </head>
 <body>
@@ -746,7 +761,7 @@
         </div>
     </div>
 
-    <script>
+    <!-- <script>
         // Game state
         let gameState = {
             score: 0,
@@ -761,7 +776,16 @@
             selectedSeed: '🌻',
             plantedSeeds: [],
             combo: 0,
-            totalPatterns: 0
+            totalPatterns: 0,
+            // NEW: Per-plant score tracking
+            earnedPoints: {
+                '🌻': 0,
+                '🌹': 0,
+                '🌷': 0,
+                '🌺': 0,
+                '🌸': 0,
+                '🌼': 0
+            }
         };
 
         // Audio context and voice synthesis
@@ -822,12 +846,11 @@
             }
 
             speechSynth.cancel(); // Cancel any ongoing speech
-            
             const utterance = new SpeechSynthesisUtterance(text);
-            
+
             // Find a suitable voice
-            const preferredVoice = voices.find(voice => 
-                voice.lang.includes('en') && 
+            const preferredVoice = voices.find(voice =>
+                voice.lang.includes('en') &&
                 (voice.name.includes('Female') || voice.name.includes('Google'))
             ) || voices.find(voice => voice.lang.includes('en')) || voices[0];
             // Game state continued...
@@ -947,7 +970,30 @@
                 btn.click();
             });
         }
-
+        function setupGarden() {
+    const garden = document.getElementById('garden');
+    garden.innerHTML = '';
+    for (let i = 0; i < 18; i++) {
+        const slot = document.createElement('div');
+        slot.classList.add('plant-slot');
+        slot.setAttribute('tabindex', '0');
+        slot.setAttribute('role', 'button');
+        if (i >= gameState.unlockedPlots) {
+            slot.classList.add('locked');
+            slot.setAttribute('aria-label', 'Locked plant slot');
+            slot.innerHTML = '🔒';
+            slot.addEventListener('click', () => {
+                speak("This plot is still locked. Earn more points to unlock new plots.");
+                showFloatingMessage("❌ Plot locked!", 'error');
+                updateStatus("🌱 Get 10 more points to unlock the next plot.");
+            });
+        } else {
+            slot.setAttribute('aria-label', 'Empty plant slot');
+            slot.addEventListener('click', () => plantSeed(slot));
+        }
+        garden.appendChild(slot);
+    }
+}
         // Check user input
         function checkInput() {
             const current = gameState.playerInput.length - 1;
@@ -961,12 +1007,30 @@
             }
         }
 
-        // Handle success
+        // Handle success and per-plant points update
         function handleSuccess() {
-            const plant = plantProperties[gameState.selectedSeed];
+            
+            setupGarden();
+            const seed = gameState.selectedSeed;
+            const plant = plantProperties[seed];
             gameState.score += plant.points;
             gameState.plants++;
             gameState.level++;
+            // NEW: Add points to seed-specific progress
+            gameState.earnedPoints[seed] += plant.points;
+            const newUnlocked = Math.min(18, Math.floor(gameState.score / 10)); // 18 is the max number of plots
+    if (newUnlocked > gameState.unlockedPlots) {
+        gameState.unlockedPlots = newUnlocked;
+        updatePlotsLocking();
+        showFloatingMessage(`🌱 Plot #${gameState.unlockedPlots} unlocked!`, 'success');
+        updateStatus(`A new plot has been unlocked!`);
+    }
+
+    updateScore();
+    speak(successPhrases[Math.floor(Math.random() * successPhrases.length)]);
+    showFloatingMessage("🌱 Grow!", 'success');
+    updateStatus("🌟 Great job! Pattern matched!");
+    updateProgress();
             updateScore();
             speak(successPhrases[Math.floor(Math.random() * successPhrases.length)]);
             showFloatingMessage("🌱 Grow!", 'success');
@@ -982,17 +1046,32 @@
             gameState.combo = 0;
         }
 
-        // Plant seed in clicked slot
+        // Plant seed in clicked slot, ENFORCING THE PER-PLANT SCORE REQUIREMENT
         function plantSeed(slot) {
             if (slot.classList.contains('planted')) return;
+
             const seed = gameState.selectedSeed;
+            const pointsNeeded = 10;
+
+            if (gameState.earnedPoints[seed] < pointsNeeded) {
+                // Can't plant yet
+                speak(`You need ${pointsNeeded} points to plant a ${plantProperties[seed].name}`);
+                showFloatingMessage(`❌ Earn more ${seed} points`, 'error');
+                updateStatus(`🔒 Earn ${pointsNeeded} points with ${seed} before planting.`);
+                return;
+            }
+
+            // Allowed to plant
             slot.textContent = seed;
             slot.classList.add('planted');
             slot.setAttribute('aria-label', `${seed} planted`);
+            showFloatingMessage("🌱 Planted!", 'success');
+            updateStatus(`🌼 You planted a ${plantProperties[seed].name}!`);
         }
 
         // Reset game
         function resetGame() {
+
             gameState = {
                 score: 0,
                 level: 1,
@@ -1006,7 +1085,16 @@
                 selectedSeed: '🌻',
                 plantedSeeds: [],
                 combo: 0,
-                totalPatterns: 0
+                totalPatterns: 0,
+                // RESET earned points as well!
+                earnedPoints: {
+                    '🌻': 0,
+                    '🌹': 0,
+                    '🌷': 0,
+                    '🌺': 0,
+                    '🌸': 0,
+                    '🌼': 0
+                }
             };
             document.getElementById('garden').innerHTML = '';
             setupGarden();
@@ -1047,6 +1135,6 @@
             document.body.appendChild(msg);
             setTimeout(() => msg.remove(), 2000);
         }
-    </script>
+    </script> -->
 </body>
 </html>
