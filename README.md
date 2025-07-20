@@ -13,9 +13,8 @@ This game is focused on children with:
 
 - Motor impairments (use of limited keys and auto-planting support)
 - Hearing challenges (uses visual and vibrational feedback)
-- Autism Spectrum Disorder
 - Cognitive and learning disabilities
-- Visual impairments (dark mode and high-contrast options)
+
 
 
 ## 🔧 Features
