@@ -278,7 +278,7 @@ body {
     background: var(--card-bg);
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
-    padding: 25px;
+    padding: 35px;
     border-radius: 20px;
     border: 2px solid var(--card-border);
     position: sticky;
@@ -372,12 +372,12 @@ body {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 15px;
-    margin: 25px 0;
+    margin: 35px 0;
 }
 
 .rhythm-btn {
-    width: 100px;
-    height: 100px;
+    width: 90px;
+    height: 90px;
     border: 3px solid rgba(255, 255, 255, 0.3);
     border-radius: 20px;
     font-size: 2em;
@@ -429,4 +429,123 @@ body {
 /* Class to trigger the mute glow animation */
 .rhythm-btn.is-glowing {
   animation: muteGlowAnimation 0.4s ease-in-out;
+}
+
+/* --- ENHANCED CONTROL BUTTONS --- */
+
+.controls {
+  gap: 15px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 15px;
+  border-top: 1px solid var(--card-border);
+}
+
+.control-btn {
+  border-radius: 10px;
+  font-weight: bold;
+  font-size: 0.9em;
+  padding: 12px 18px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.2s ease-in-out;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.control-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+.control-btn:active {
+  transform: translateY(0);
+  filter: brightness(0.9);
+}
+
+/* 🎵 Start Button - Primary Action */
+#playBtn {
+  background: linear-gradient(45deg, #28a745, #20c997);
+  box-shadow: 0 4px 15px -5px rgba(32, 201, 151, 0.6);
+}
+
+#playBtn:hover {
+  box-shadow: 0 4px 20px -2px rgba(32, 201, 151, 0.7);
+}
+
+
+/* 🔄 Replay Button - Secondary Action */
+#replayBtn {
+  background: linear-gradient(45deg, #007bff, #6f42c1);
+  box-shadow: 0 4px 15px -5px rgba(111, 66, 193, 0.6);
+}
+
+#replayBtn:hover {
+   box-shadow: 0 4px 20px -2px rgba(111, 66, 193, 0.7);
+}
+
+
+/* 🆕 New Game Button - Reset Action */
+.control-btn[onclick^='resetGame'] {
+  background: linear-gradient(45deg, #fd7e14, #dc3545);
+  box-shadow: 0 4px 15px -5px rgba(220, 53, 69, 0.6);
+}
+
+.control-btn[onclick^='resetGame']:hover {
+  box-shadow: 0 4px 20px -2px rgba(220, 53, 69, 0.7);
+}
+
+
+/* Disabled State */
+.control-btn:disabled {
+  background: rgba(0, 0, 0, 0.2);
+  box-shadow: none;
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+}
+
+
+/* Instructions Modal Overlay */
+.modal {
+    position: fixed; /* This is key: it makes the element an overlay */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85); /* Dark background to focus on the pop-up */
+    display: none; /* Hidden by default */
+    justify-content: center;
+    align-items: center;
+    z-index: 2000; /* Ensures it's on top of all other content */
+    padding: 20px;
+}
+
+/* The actual pop-up box */
+.modal-content {
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 30px;
+    border-radius: 20px;
+    border: 2px solid var(--card-border);
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+    /* Add a nice fade-in animation */
+    animation: modalFadeIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
 }

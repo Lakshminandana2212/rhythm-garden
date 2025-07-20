@@ -12,7 +12,7 @@ let gameState = {
     isMuted: false,
     timeoutIds: [],
     selectedSeed: '🌻',
-    gardenSlots: ['🌻', ...Array(17).fill(null)],
+    gardenSlots: ['🌻', ...Array(31).fill(null)],
     earnedPoints: { '🌻': 0, '🌹': 0, '🌷': 0, '🌺': 0, '🌸': 0, '🌼': 0 }
 };
 
@@ -164,6 +164,8 @@ function plantSeed(index) {
     updateScore();
     showFloatingMessage("🌱 Planted!", 'success');
     updateStatus(`🌼 You planted a ${plantProperties[seed].name}!`);
+
+     checkGameCompletion();
 }
 
 function startNewPattern() {
@@ -264,7 +266,7 @@ function resetGame() {
         plants: 1,
         isMuted: gameState.isMuted,
         timeoutIds: [],
-        gardenSlots: ['🌻', ...Array(17).fill(null)],
+        gardenSlots: ['🌻', ...Array(31).fill(null)],
         selectedSeed: '🌻',
         earnedPoints: { '🌻': 0, '🌹': 0, '🌷': 0, '🌺': 0, '🌸': 0, '🌼': 0 }
     };
@@ -278,46 +280,8 @@ function resetGame() {
 // --- UTILITY & UI UPDATE FUNCTIONS ---
 
 function updateScore() {
-    // const scoreDisplay = document.getElementById('score');
-    // const levelDisplay = document.getElementById('level');
-    // const plantCountDisplay = document.getElementById('plantCount');
-
-    // // Update the visual display for score, level, and plants
-    // scoreDisplay.textContent = gameState.score;
-    // levelDisplay.textContent = gameState.level;
-    // plantCountDisplay.textContent = gameState.plants;
-
-    // // --- AUTOMATIC PLANTING LOGIC ---
-    // // Calculate how many plots should be unlocked based on the current score
-    // const newUnlocked = Math.min(18, Math.floor(gameState.score / 10) + 1);
-
-    // // Check if the number of unlocked plots has increased
-    // if (newUnlocked > gameState.unlockedPlots) {
-    //     gameState.unlockedPlots = newUnlocked;
-    //     setupGarden(); // Redraw the garden to show the newly unlocked slot
-
-    //     // Find the slot that was just unlocked
-    //     const allSlots = document.querySelectorAll('.plant-slot:not(.locked)');
-    //     const targetSlot = allSlots[allSlots.length - 1]; 
-
-    //     if (targetSlot) {
-    //         const seedToPlant = gameState.selectedSeed; // Use the currently selected seed
-            
-    //         // Automatically plant the flower
-    //         targetSlot.textContent = seedToPlant;
-    //         targetSlot.classList.add('planted');
-    //         targetSlot.setAttribute('aria-label', `${plantProperties[seedToPlant].name} planted`);
-            
-    //         // Increment the plant counter and update the display immediately
-    //         gameState.plants++;
-    //         plantCountDisplay.textContent = gameState.plants;
-    //     }
-        
-    //     showFloatingMessage(`🌱 Plot Unlocked & Planted!`, 'success');
-    //     speak("New plot unlocked and a flower has been planted!");
-    // }  
-    // --- Automatic planting logic ---
-    const newUnlocked = Math.min(18, Math.floor(gameState.score / 10) + 1);
+ 
+    const newUnlocked = Math.min(28, Math.floor(gameState.score / 10) + 1);
     if (newUnlocked > gameState.unlockedPlots) {
         // Save the new plant to our state array at the newly unlocked index
         const newIndex = gameState.unlockedPlots;
@@ -331,6 +295,8 @@ function updateScore() {
         
         showFloatingMessage(`🌱 Plot Unlocked & Planted!`, 'success');
         speak("New plot unlocked and a flower has been planted!");
+
+        checkGameCompletion();
     }
 
     // Update the visual display for score, level, and plants
@@ -415,6 +381,11 @@ function createParticles() {
 // --- INITIALIZATION ---
 
 window.onload = () => {
+
+    if (!localStorage.getItem('hasSeenInstructions')) {
+        showInstructions();
+        localStorage.setItem('hasSeenInstructions', 'true');
+    }
     // Defer audio initialization until first user interaction
     document.body.addEventListener('click', initAudio, { once: true });
     document.body.addEventListener('keydown', initAudio, { once: true });
@@ -452,3 +423,17 @@ window.onload = () => {
         }
     });
 };
+function checkGameCompletion() {
+    // Check if the number of plants has reached the total number of plots (18)
+    if (gameState.plants >= 18) {
+        disableButtons(true); // Disable all buttons
+        updateStatus("🎉 Garden Complete! 🎉");
+        showFloatingMessage("🌺 Your garden is complete!", 'success');
+        speak("Congratulations! Your rhythm garden is magnificent! The garden will now be reborn.");
+
+        // Wait 4 seconds before refreshing the page
+        setTimeout(() => {
+            location.reload();
+        }, 4000);
+    }
+}
