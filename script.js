@@ -1,437 +1,454 @@
+// --- GAME STATE & CONFIGURATION ---
 
-    // Game state
-    let gameState = {
-        unlockedPlots: 0,
-        score: 0,
-        level: 1,
-        currentPattern: [],
-        playerInput: [],
-        isPlaying: false,
-        isListening: false,
-        plants: 0,
-        isMuted: false,
-        timeoutIds: [],
-        selectedSeed: '🌻',
-        plantedSeeds: [],
-        combo: 0,
-        totalPatterns: 0,
-        // NEW: Per-plant score tracking
-        earnedPoints: {
-            '🌻': 0,
-            '🌹': 0,
-            '🌷': 0,
-            '🌺': 0,
-            '🌸': 0,
-            '🌼': 0
-        }
-    };
+let gameState = {
+    score: 0,
+    level: 1,
+    unlockedPlots: 1, // Start with one plot unlocked
+    currentPattern: [],
+    playerInput: [],
+    isPlaying: false,
+    isListening: false,
+    plants: 1,
+    isMuted: false,
+    timeoutIds: [],
+    selectedSeed: '🌻',
+    gardenSlots: ['🌻', ...Array(17).fill(null)],
+    earnedPoints: { '🌻': 0, '🌹': 0, '🌷': 0, '🌺': 0, '🌸': 0, '🌼': 0 }
+};
 
-    // Audio context and voice synthesis
-    let audioContext;
-    let gainNode;
-    let speechSynth = window.speechSynthesis;
-    let voices = [];
+const plantProperties = {
+    '🌻': { name: 'Sunflower', points: 10 },
+    '🌹': { name: 'Rose', points: 15 },
+    '🌷': { name: 'Tulip', points: 12 },
+    '🌺': { name: 'Hibiscus', points: 18 },
+    '🌸': { name: 'Cherry Blossom', points: 20 },
+    '🌼': { name: 'Daisy', points: 8 }
+};
 
-    // Plant properties for different seeds
-    const plantProperties = {
-        '🌻': { name: 'Sunflower', points: 10, sound: 'sunny' },
-        '🌹': { name: 'Rose', points: 15, sound: 'romantic' },
-        '🌷': { name: 'Tulip', points: 12, sound: 'spring' },
-        '🌺': { name: 'Hibiscus', points: 18, sound: 'tropical' },
-        '🌸': { name: 'Cherry Blossom', points: 20, sound: 'delicate' },
-        '🌼': { name: 'Daisy', points: 8, sound: 'cheerful' }
-    };
+const NOTE_FREQUENCIES = [261.63, 329.63, 392.00, 493.88]; // C4, E4, G4, B4
 
-    // Encouraging phrases for success
-    const successPhrases = [
-        "Fantastic! Your garden is blooming beautifully!",
-        "Perfect rhythm! You're a natural gardener!",
-        "Amazing work! Keep that musical magic flowing!",
-        "Spectacular! Your plants are dancing with joy!",
-        "Incredible! You've got the rhythm of nature!",
-        "Outstanding! Your garden sings with harmony!",
-        "Brilliant performance! Mother Nature is impressed!",
-        "Wonderful! Your musical garden is thriving!"
-    ];
+// --- AUDIO & FEEDBACK ---
 
-    // Encouraging phrases for errors
-    const encouragementPhrases = [
-        "Almost there! Try listening carefully to the rhythm!",
-        "Don't worry! Every gardener learns from practice!",
-        "So close! Feel the beat and try again!",
-        "Keep going! Your garden believes in you!",
-        "That's okay! Even the best musicians need practice!",
-        "Try again! Listen with your heart this time!",
-        "No worries! Rome wasn't built in a day, neither are gardens!",
-        "Keep trying! Your plants are cheering you on!"
-    ];
+let audioContext;
+let masterGainNode;
+let speechSynth = window.speechSynthesis;
+let voices = [];
 
-    // Load voices when available
-    function loadVoices() {
-        voices = speechSynth.getVoices();
-        if (voices.length === 0) {
-            setTimeout(loadVoices, 100);
-        }
+function initAudio() {
+    if (audioContext) return;
+    try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        masterGainNode = audioContext.createGain();
+        masterGainNode.gain.value = gameState.isMuted ? 0 : 1;
+        masterGainNode.connect(audioContext.destination);
+    } catch (e) {
+        console.error("Web Audio API is not supported in this browser.");
     }
+}
 
-    // Speak text with emotion
-    function speak(text, options = {}) {
-        if (gameState.isMuted) {
-            // Enhanced visual feedback when muted
-            document.body.classList.add('vibrate');
-            setTimeout(() => document.body.classList.remove('vibrate'), 500);
-            return;
-        }
+function playNote(noteIndex) {
+    if (!audioContext || gameState.isMuted) return;
+    const oscillator = audioContext.createOscillator();
+    const noteGain = audioContext.createGain();
+    
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(NOTE_FREQUENCIES[noteIndex], audioContext.currentTime);
+    
+    noteGain.gain.setValueAtTime(0.5, audioContext.currentTime);
+    noteGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
 
-        speechSynth.cancel(); // Cancel any ongoing speech
-        const utterance = new SpeechSynthesisUtterance(text);
+    oscillator.connect(noteGain);
+    noteGain.connect(masterGainNode);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.5);
+}
 
-        // Find a suitable voice
-        const preferredVoice = voices.find(voice =>
-            voice.lang.includes('en') &&
-            (voice.name.includes('Female') || voice.name.includes('Google'))
-        ) || voices.find(voice => voice.lang.includes('en')) || voices[0];
-        // Game state continued...
-        utterance.voice = preferredVoice || voices[0];
-        utterance.rate = options.rate || 1;
-        utterance.pitch = options.pitch || 1;
-        utterance.volume = options.volume || 1;
+function playClickSound() {
+    if (!audioContext || gameState.isMuted) return;
+    const oscillator = audioContext.createOscillator();
+    const clickGain = audioContext.createGain();
 
-        speechSynth.speak(utterance);
+    oscillator.type = 'triangle';
+    oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5 note
+
+    clickGain.gain.setValueAtTime(0.3, audioContext.currentTime);
+    clickGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
+
+    oscillator.connect(clickGain);
+    clickGain.connect(masterGainNode);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.1);
+}
+
+function triggerVibration(duration = 50) {
+    if (navigator.vibrate) {
+        navigator.vibrate(duration);
     }
+}
 
-    // Toggle high contrast
-    function toggleHighContrast() {
-        document.body.classList.toggle('high-contrast');
-    }
+function speak(text) {
+    if (gameState.isMuted || !speechSynth) return;
+    speechSynth.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    const preferredVoice = voices.find(v => v.lang.includes('en') && v.name.includes('Female')) || voices.find(v => v.lang.includes('en'));
+    utterance.voice = preferredVoice || voices[0];
+    utterance.rate = 1.1;
+    utterance.pitch = 1.2;
+    speechSynth.speak(utterance);
+}
 
-    // Toggle mute
-    function toggleMute() {
-        gameState.isMuted = !gameState.isMuted;
-        const btn = document.querySelector("[onclick='toggleMute()']");
-        btn.textContent = gameState.isMuted ? '🔇 Muted' : '🔊 Sound';
-    }
+// --- UI & GAME LOGIC ---
 
-    // Show and hide instructions
-    function showInstructions() {
-        document.getElementById('instructionsModal').style.display = 'flex';
-    }
-
-    function closeInstructions() {
-        document.getElementById('instructionsModal').style.display = 'none';
-    }
-
-    // Initialize
-    window.onload = () => {
-        loadVoices();
-        setupGarden();
-        bindControls();
-    };
 function setupGarden() {
     const garden = document.getElementById('garden');
-    garden.innerHTML = '';
-    for (let i = 0; i < 18; i++) {
+    garden.innerHTML = ''; // Clear the old garden before drawing the new one
+
+    // Loop through our saved garden state
+    gameState.gardenSlots.forEach((seed, index) => {
         const slot = document.createElement('div');
         slot.classList.add('plant-slot');
         slot.setAttribute('tabindex', '0');
         slot.setAttribute('role', 'button');
-
-        if (i >= gameState.unlockedPlots) {
+        
+        // Is this plot still locked?
+        if (index >= gameState.unlockedPlots) {
             slot.classList.add('locked');
-            slot.setAttribute('aria-label', 'Locked plant slot');
             slot.innerHTML = '🔒';
+            slot.setAttribute('aria-label', 'Locked plant slot');
             slot.addEventListener('click', () => {
-                speak("This plot is still locked. Earn more points to unlock new plots.");
+                playClickSound();
+                triggerVibration(20);
+                const pointsNeeded = (gameState.unlockedPlots + 1) * 10;
+                updateStatus(`🌱 Score ${pointsNeeded} to unlock this plot!`);
                 showFloatingMessage("❌ Plot locked!", 'error');
-                updateStatus("🌱 Get more points to unlock this plot.");
             });
-        } else {
+        } 
+        // Is there a seed planted here in our saved state?
+        else if (seed) {
+            slot.textContent = seed;
+            slot.classList.add('planted');
+            slot.setAttribute('aria-label', `${plantProperties[seed].name} planted`);
+        } 
+        // Otherwise, it's an empty, unlocked plot
+        else {
             slot.setAttribute('aria-label', 'Empty plant slot');
-            slot.addEventListener('click', () => plantSeed(slot));
+            // Add a listener for manual planting, passing the plot's index
+            slot.addEventListener('click', () => plantSeed(index));
         }
-
         garden.appendChild(slot);
-    }
+    });
 }
 
-    // // Setup garden slots
-    // function setupGarden() {
-    //     const garden = document.getElementById('garden');
-    //     for (let i = 0; i < 18; i++) {
-    //         const slot = document.createElement('div');
-    //         slot.classList.add('plant-slot');
-    //         slot.setAttribute('tabindex', '0');
-    //         slot.setAttribute('role', 'button');
-    //         slot.setAttribute('aria-label', 'Empty plant slot');
-    //         slot.addEventListener('click', () => plantSeed(slot));
-    //         garden.appendChild(slot);
-    //     }
-    // }
+function plantSeed(index) {
+    playClickSound();
+    triggerVibration(30);
 
-    // Seed selector
-    function selectSeed(seed) {
-        gameState.selectedSeed = seed;
-        document.querySelectorAll('.seed-btn').forEach(btn => {
-            btn.classList.remove('selected');
-            if (btn.dataset.seed === seed) btn.classList.add('selected');
-        });
+    const seed = gameState.selectedSeed;
+    const pointsNeeded = 10;
+
+    if (gameState.earnedPoints[seed] < pointsNeeded) {
+        speak(`You need ${pointsNeeded} points with the ${plantProperties[seed].name} to plant it.`);
+        showFloatingMessage(`❌ Earn ${pointsNeeded} ${seed} points`, 'error');
+        updateStatus(`🔒 Earn points with ${seed} to plant it.`);
+        return;
     }
 
-    // Start new rhythm pattern
-    function startNewPattern() {
-        gameState.currentPattern = Array.from({length: gameState.level + 1}, () => Math.floor(Math.random() * 4));
-        gameState.playerInput = [];
-        gameState.isPlaying = true;
-        gameState.isListening = false;
-        updateStatus("🎧 Listen to the pattern...");
-        playPattern();
-    }
+    // Save the new plant to our state array
+    gameState.gardenSlots[index] = seed;
+    gameState.plants++;
+    
+    // Redraw the entire garden with the new state
+    setupGarden(); 
+    updateScore();
+    showFloatingMessage("🌱 Planted!", 'success');
+    updateStatus(`🌼 You planted a ${plantProperties[seed].name}!`);
+}
 
-    // Replay pattern
-    function replayPattern() {
-        if (!gameState.currentPattern.length) return;
-        updateStatus("🎧 Replaying pattern...");
-        playPattern();
-    }
+function startNewPattern() {
+    gameState.currentPattern = Array.from({ length: gameState.level + 1 }, () => Math.floor(Math.random() * 4));
+    gameState.playerInput = [];
+    gameState.isListening = false;
+    updateStatus("🎧 Listen to the pattern...");
+    playPattern();
+}
 
-    // Play pattern
-    function playPattern() {
-        disableButtons();
-        gameState.timeoutIds.forEach(clearTimeout);
-        gameState.timeoutIds = [];
-        const buttons = document.querySelectorAll('.rhythm-btn');
-        gameState.currentPattern.forEach((note, index) => {
-            const timeout = setTimeout(() => {
-                const btn = buttons[note];
-                btn.classList.add('active');
-                setTimeout(() => btn.classList.remove('active'), 500);
-            }, 800 * index);
-            gameState.timeoutIds.push(timeout);
-        });
-        setTimeout(() => {
-            enableButtons();
-            updateStatus("🎵 Now it's your turn!");
-            gameState.isListening = true;
-        }, 800 * gameState.currentPattern.length);
-    }
+function replayPattern() {
+    if (!gameState.currentPattern.length) return;
+    updateStatus("🎧 Replaying pattern...");
+    playPattern();
+}
 
-    // Button press handling
-    function bindControls() {
-        document.querySelectorAll('.rhythm-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (!gameState.isListening) return;
-                const note = parseInt(btn.dataset.note);
-                gameState.playerInput.push(note);
-                checkInput();
-            });
-        });
-
-        document.addEventListener('keydown', e => {
-            const keyMap = { 'q': 0, 'w': 1, 'a': 2, 's': 3 };
-            if (!gameState.isListening || !keyMap.hasOwnProperty(e.key)) return;
-            const note = keyMap[e.key];
+function playPattern() {
+    disableButtons(true);
+    gameState.timeoutIds.forEach(clearTimeout);
+    gameState.timeoutIds = [];
+    
+    gameState.currentPattern.forEach((note, index) => {
+        const timeout = setTimeout(() => {
             const btn = document.querySelector(`.rhythm-btn[data-note='${note}']`);
-            btn.click();
-        });
-    }
-    function setupGarden() {
-const garden = document.getElementById('garden');
-garden.innerHTML = '';
-for (let i = 0; i < 18; i++) {
-    const slot = document.createElement('div');
-    slot.classList.add('plant-slot');
-    slot.setAttribute('tabindex', '0');
-    slot.setAttribute('role', 'button');
-    if (i >= gameState.unlockedPlots) {
-        slot.classList.add('locked');
-        slot.setAttribute('aria-label', 'Locked plant slot');
-        slot.innerHTML = '🔒';
-        slot.addEventListener('click', () => {
-            speak("This plot is still locked. Earn more points to unlock new plots.");
-            showFloatingMessage("❌ Plot locked!", 'error');
-            updateStatus("🌱 Get 10 more points to unlock the next plot.");
-        });
-    } else {
-        slot.setAttribute('aria-label', 'Empty plant slot');
-        slot.addEventListener('click', () => plantSeed(slot));
-    }
-    garden.appendChild(slot);
-}
-}
-    // Check user input
-    function checkInput() {
-        const current = gameState.playerInput.length - 1;
-        if (gameState.playerInput[current] !== gameState.currentPattern[current]) {
-            handleMistake();
-            return;
-        }
+            
+            // CHECK if the game is muted and provide alternate feedback
+            if (gameState.isMuted) {
+                triggerVibration(150); // A distinct haptic pulse for the note
+                btn.classList.add('is-glowing');
+                setTimeout(() => btn.classList.remove('is-glowing'), 400);
+            } else {
+                playNote(note); // Play sound only if not muted
+                btn.classList.add('is-playing');
+                setTimeout(() => btn.classList.remove('is-playing'), 300);
+            }
 
-        if (gameState.playerInput.length === gameState.currentPattern.length) {
-            handleSuccess();
-        }
+        }, 800 * (index + 1));
+        gameState.timeoutIds.push(timeout);
+    });
+
+    setTimeout(() => {
+        enableButtons();
+        updateStatus("🎵 Now, it's your turn!");
+        gameState.isListening = true;
+    }, 800 * (gameState.currentPattern.length + 1));
+}
+
+function checkInput() {
+    const current = gameState.playerInput.length - 1;
+    if (gameState.playerInput[current] !== gameState.currentPattern[current]) {
+        handleMistake();
+        return;
     }
+    if (gameState.playerInput.length === gameState.currentPattern.length) {
+        handleSuccess();
+    }
+}
+
 function handleSuccess() {
     const seed = gameState.selectedSeed;
     const plant = plantProperties[seed];
     gameState.score += plant.points;
-    gameState.plants++;
     gameState.level++;
-
     gameState.earnedPoints[seed] += plant.points;
-
-    // Unlock plots logic
-    const totalScore = gameState.score;
-    const newUnlocked = Math.min(18, Math.floor(totalScore / 10));
-    if (newUnlocked > gameState.unlockedPlots) {
-        gameState.unlockedPlots = newUnlocked;
-        setupGarden();
-        showFloatingMessage(`🌱 Plot #${gameState.unlockedPlots} unlocked!`, 'success');
-        updateStatus(`✨ A new planting plot was unlocked!`);
-    }
-
+    
     updateScore();
-    speak(successPhrases[Math.floor(Math.random() * successPhrases.length)]);
-    showFloatingMessage("🌱 Grow!", 'success');
-    updateStatus("🌟 Great job! Pattern matched!");
-    updateProgress();
+    showFloatingMessage("🌟 Success!", 'success');
+    updateStatus("Great job! Starting next pattern...");
+    speak("Excellent!");
+
+    setTimeout(startNewPattern, 2000);
 }
 
-    // Handle success and per-plant points update
-//     function handleSuccess() {
+function handleMistake() {
+    gameState.isListening = false;
+    showFloatingMessage("❌ Oops!", 'error');
+    updateStatus("Wrong note! Try again.");
+    speak("Try again.");
+    
+    // Allow the user to try the same pattern again
+    setTimeout(() => {
+        gameState.playerInput = [];
+        gameState.isListening = true;
+        updateStatus("🎵 Give it another try!");
+    }, 2000);
+}
+
+function resetGame() {
+    const isMuted = gameState.isMuted; 
+    gameState = {
+        score: 0,
+        level: 1,
+        unlockedPlots: 1,
+        currentPattern: [],
+        playerInput: [],
+        isPlaying: false,
+        isListening: false,
+        plants: 1,
+        isMuted: gameState.isMuted,
+        timeoutIds: [],
+        gardenSlots: ['🌻', ...Array(17).fill(null)],
+        selectedSeed: '🌻',
+        earnedPoints: { '🌻': 0, '🌹': 0, '🌷': 0, '🌺': 0, '🌸': 0, '🌼': 0 }
+    };
+    setupGarden();
+    updateScore();
+    updateProgress();
+    updateStatus("🎯 Click a button or press Start!");
+    document.getElementById('replayBtn').disabled = true;
+}
+
+// --- UTILITY & UI UPDATE FUNCTIONS ---
+
+function updateScore() {
+    // const scoreDisplay = document.getElementById('score');
+    // const levelDisplay = document.getElementById('level');
+    // const plantCountDisplay = document.getElementById('plantCount');
+
+    // // Update the visual display for score, level, and plants
+    // scoreDisplay.textContent = gameState.score;
+    // levelDisplay.textContent = gameState.level;
+    // plantCountDisplay.textContent = gameState.plants;
+
+    // // --- AUTOMATIC PLANTING LOGIC ---
+    // // Calculate how many plots should be unlocked based on the current score
+    // const newUnlocked = Math.min(18, Math.floor(gameState.score / 10) + 1);
+
+    // // Check if the number of unlocked plots has increased
+    // if (newUnlocked > gameState.unlockedPlots) {
+    //     gameState.unlockedPlots = newUnlocked;
+    //     setupGarden(); // Redraw the garden to show the newly unlocked slot
+
+    //     // Find the slot that was just unlocked
+    //     const allSlots = document.querySelectorAll('.plant-slot:not(.locked)');
+    //     const targetSlot = allSlots[allSlots.length - 1]; 
+
+    //     if (targetSlot) {
+    //         const seedToPlant = gameState.selectedSeed; // Use the currently selected seed
+            
+    //         // Automatically plant the flower
+    //         targetSlot.textContent = seedToPlant;
+    //         targetSlot.classList.add('planted');
+    //         targetSlot.setAttribute('aria-label', `${plantProperties[seedToPlant].name} planted`);
+            
+    //         // Increment the plant counter and update the display immediately
+    //         gameState.plants++;
+    //         plantCountDisplay.textContent = gameState.plants;
+    //     }
         
-//         setupGarden();
-//         const seed = gameState.selectedSeed;
-//         const plant = plantProperties[seed];
-//         gameState.score += plant.points;
-//         gameState.plants++;
-//         gameState.level++;
-//         // NEW: Add points to seed-specific progress
-//         gameState.earnedPoints[seed] += plant.points;
-//         const newUnlocked = Math.min(18, Math.floor(gameState.score / 10)); // 18 is the max number of plots
-// if (newUnlocked > gameState.unlockedPlots) {
-//     gameState.unlockedPlots = newUnlocked;
-//     updatePlotsLocking();
-//     showFloatingMessage(`🌱 Plot #${gameState.unlockedPlots} unlocked!`, 'success');
-//     updateStatus(`A new plot has been unlocked!`);
-// }
-
-updateScore();
-speak(successPhrases[Math.floor(Math.random() * successPhrases.length)]);
-showFloatingMessage("🌱 Grow!", 'success');
-updateStatus("🌟 Great job! Pattern matched!");
-updateProgress();
-        updateScore();
-        speak(successPhrases[Math.floor(Math.random() * successPhrases.length)]);
-        showFloatingMessage("🌱 Grow!", 'success');
-        updateStatus("🌟 Great job! Pattern matched!");
-        updateProgress();
-
-
-    // Handle mistake
-    function handleMistake() {
-        speak(encouragementPhrases[Math.floor(Math.random() * encouragementPhrases.length)]);
-        showFloatingMessage("❌ Oops!", 'error');
-        updateStatus("🔁 Try again!");
-        gameState.combo = 0;
+    //     showFloatingMessage(`🌱 Plot Unlocked & Planted!`, 'success');
+    //     speak("New plot unlocked and a flower has been planted!");
+    // }  
+    // --- Automatic planting logic ---
+    const newUnlocked = Math.min(18, Math.floor(gameState.score / 10) + 1);
+    if (newUnlocked > gameState.unlockedPlots) {
+        // Save the new plant to our state array at the newly unlocked index
+        const newIndex = gameState.unlockedPlots;
+        gameState.gardenSlots[newIndex] = gameState.selectedSeed;
+        
+        gameState.unlockedPlots = newUnlocked;
+        gameState.plants++;
+        
+        // Redraw the garden, which will now include the auto-planted flower
+        setupGarden(); 
+        
+        showFloatingMessage(`🌱 Plot Unlocked & Planted!`, 'success');
+        speak("New plot unlocked and a flower has been planted!");
     }
 
-    // Plant seed in clicked slot, ENFORCING THE PER-PLANT SCORE REQUIREMENT
-    function plantSeed(slot) {
-        if (slot.classList.contains('planted')) return;
+    // Update the visual display for score, level, and plants
+    document.getElementById('score').textContent = gameState.score;
+    document.getElementById('level').textContent = gameState.level;
+    document.getElementById('plantCount').textContent = gameState.plants;
+}
 
-        const seed = gameState.selectedSeed;
-        const pointsNeeded = 10;
+function updateStatus(message) {
+    document.getElementById('gameStatus').textContent = message;
+}
 
-        if (gameState.earnedPoints[seed] < pointsNeeded) {
-            // Can't plant yet
-            speak(`You need ${pointsNeeded} points to plant a ${plantProperties[seed].name}`);
-            showFloatingMessage(`❌ Earn more ${seed} points`, 'error');
-            updateStatus(`🔒 Earn ${pointsNeeded} points with ${seed} before planting.`);
-            return;
-        }
+function updateProgress() {
+    const progress = ((gameState.level -1) % 10 / 10) * 100;
+    document.getElementById('progress').style.width = `${progress}%`;
+}
 
-        // Allowed to plant
-        slot.textContent = seed;
-        slot.classList.add('planted');
-        slot.setAttribute('aria-label', `${seed} planted`);
-        showFloatingMessage("🌱 Planted!", 'success');
-        updateStatus(`🌼 You planted a ${plantProperties[seed].name}!`);
-    }
-
-    // Reset game
-    function resetGame() {
-
-        gameState = {
-            score: 0,
-            level: 1,
-            currentPattern: [],
-            playerInput: [],
-            isPlaying: false,
-            isListening: false,
-            plants: 0,
-            unlockedPlots: 0,
-            isMuted: false,
-            timeoutIds: [],
-            selectedSeed: '🌻',
-            plantedSeeds: [],
-            combo: 0,
-            totalPatterns: 0,
-            // RESET earned points as well!
-            earnedPoints: {
-                '🌻': 0,
-                '🌹': 0,
-                '🌷': 0,
-                '🌺': 0,
-                '🌸': 0,
-                '🌼': 0
-            }
-        };
-        document.getElementById('garden').innerHTML = '';
-        setupGarden();
-        updateScore();
-        updateProgress();
-        updateStatus("🎯 Press \"Start New Pattern\" to begin your musical journey!");
-    }
-
-    // Utility updates
-    function updateScore() {
-
-        const totalScore = gameState.score;
-        const newUnlocked = Math.min(18, Math.floor(totalScore / 10));
-        if (newUnlocked > gameState.unlockedPlots) {
-            gameState.unlockedPlots = newUnlocked;
-            setupGarden();
-            showFloatingMessage(`🌱 Plot #${gameState.unlockedPlots} unlocked!`, 'success');
-            updateStatus(`✨ A new planting plot was unlocked!`);
-        }
-        document.getElementById('score').textContent = gameState.score;
-        document.getElementById('level').textContent = gameState.level;
-        document.getElementById('plantCount').textContent = gameState.plants;
-    }
-
-    function updateStatus(message) {
-        document.getElementById('gameStatus').textContent = message;
-    }
-
-    function updateProgress() {
-        const progress = (gameState.level / 10) * 100;
-        document.getElementById('progress').style.width = `${progress}%`;
-    }
-
-    function disableButtons() {
-        document.querySelectorAll('.rhythm-btn').forEach(btn => btn.disabled = true);
-    }
-
-    function enableButtons() {
-        document.querySelectorAll('.rhythm-btn').forEach(btn => btn.disabled = false);
+function disableButtons(isPatternPlaying = false) {
+    document.querySelectorAll('.rhythm-btn, .control-btn').forEach(btn => btn.disabled = true);
+    if (!isPatternPlaying) {
         document.getElementById('replayBtn').disabled = false;
     }
+}
 
-    function showFloatingMessage(text, type) {
-        const msg = document.createElement('div');
-        msg.className = `floating-message ${type === 'success' ? 'success-message' : 'error-message'}`;
-        msg.textContent = text;
-        document.body.appendChild(msg);
-        setTimeout(() => msg.remove(), 2000);
-    }
+function enableButtons() {
+    document.querySelectorAll('.rhythm-btn, .control-btn').forEach(btn => btn.disabled = false);
+}
+
+function selectSeed(seed) {
+    gameState.selectedSeed = seed;
+    document.querySelectorAll('.seed-btn').forEach(btn => {
+        btn.classList.toggle('selected', btn.dataset.seed === seed);
+    });
+}
+
+function toggleHighContrast() {
+    document.body.classList.toggle('high-contrast');
+}
+
+function toggleMute() {
+    gameState.isMuted = !gameState.isMuted;
+    const btn = document.getElementById('muteBtn');
+    btn.innerHTML = gameState.isMuted ? '🔇' : '🔊';
     
+    if (audioContext) {
+        masterGainNode.gain.setValueAtTime(gameState.isMuted ? 0 : 1, audioContext.currentTime);
+    }
+    if (gameState.isMuted) {
+        speechSynth.cancel();
+    }
+}
+
+function showFloatingMessage(text, type) {
+    const msg = document.createElement('div');
+    msg.className = `floating-message ${type}-message`;
+    msg.textContent = text;
+    document.body.appendChild(msg);
+    setTimeout(() => msg.remove(), 2000);
+}
+
+function showInstructions() {
+    document.getElementById('instructionsModal').style.display = 'flex';
+}
+
+function closeInstructions() {
+    document.getElementById('instructionsModal').style.display = 'none';
+}
+
+function createParticles() {
+    const container = document.getElementById('particles');
+    for (let i = 0; i < 25; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = `${Math.random() * 100}%`;
+        p.style.top = `${Math.random() * 100}%`;
+        p.style.animationDelay = `${Math.random() * 6}s`;
+        p.style.transform = `scale(${Math.random() * 0.5 + 0.5})`;
+        container.appendChild(p);
+    }
+}
+
+// --- INITIALIZATION ---
+
+window.onload = () => {
+    // Defer audio initialization until first user interaction
+    document.body.addEventListener('click', initAudio, { once: true });
+    document.body.addEventListener('keydown', initAudio, { once: true });
+    
+    // Load speech synthesis voices
+    speechSynth.onvoiceschanged = () => { voices = speechSynth.getVoices(); };
+    voices = speechSynth.getVoices();
+
+    setupGarden();
+    updateScore();
+    createParticles();
+
+    document.querySelectorAll('.rhythm-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const note = parseInt(btn.dataset.note);
+            playNote(note);
+            triggerVibration(50);
+            if (gameState.isListening) {
+               btn.classList.add('is-playing');
+                setTimeout(() => btn.classList.remove('is-playing'), 300);
+
+                gameState.playerInput.push(note);
+                checkInput();
+            }
+        });
+    });
+
+    document.addEventListener('keydown', e => {
+        const keyMap = { 'q': 0, 'w': 1, 'a': 2, 's': 3 };
+        if (keyMap.hasOwnProperty(e.key.toLowerCase())) {
+            const btn = document.querySelector(`.rhythm-btn[data-note='${keyMap[e.key.toLowerCase()]}']`);
+            if (btn && !btn.disabled) {
+                btn.click();
+            }
+        }
+    });
+};
