@@ -34,6 +34,3 @@ This game is focused on children with:
 - HTML5
 - CSS3
 - JavaScript
-- Web APIs:
-  - SpeechSynthesis API
-  - Vibration API
