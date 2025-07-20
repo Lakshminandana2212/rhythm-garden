@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rhythm Garden - Accessible Music Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .game-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .garden {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            min-height: 200px;
+        }
+
+        .plant-slot {
+            width: 80px;
+            height: 80px;
+            background: rgba(76, 175, 80, 0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            transition: all 0.3s ease;
+            border: 3px solid rgba(76, 175, 80, 0.5);
+        }
+
+        .plant-slot.stage-1::after {
+            content: '🌱';
+            animation: grow 0.5s ease;
+        }
+
+        .plant-slot.stage-2::after {
+            content: '🌿';
+            animation: grow 0.5s ease;
+        }
+
+        .plant-slot.stage-3::after {
+            content: '🌻';
+            animation: grow 0.5s ease;
+        }
+
+        @keyframes grow {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .rhythm-panel {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            text-align: center;
+            min-width: 400px;
+        }
+
+        .rhythm-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .rhythm-btn {
+            width: 100px;
+            height: 100px;
+            border: none;
+            border-radius: 50%;
+            font-size: 1.5em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            min-width: 44px;
+            min-height: 44px;
+            position: relative;
+        }
+
+        .rhythm-btn:focus {
+            outline: 3px solid #FFD700;
+            outline-offset: 3px;
+        }
+
+        .rhythm-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .rhythm-btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn-1 {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+        }
+
+        .btn-2 {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+        }
+
+        .btn-3 {
+            background: linear-gradient(45deg, #45b7d1, #2196f3);
+        }
+
+        .btn-4 {
+            background: linear-gradient(45deg, #96ceb4, #2ecc71);
+        }
+
+        .rhythm-btn.active {
+            animation: pulse 0.3s ease;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); box-shadow: 0 0 30px rgba(255, 255, 255, 0.9); }
+            100% { transform: scale(1); }
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 44px;
+            min-height: 44px;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .control-btn:focus {
+            outline: 3px solid #FFD700;
+            outline-offset: 2px;
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status {
+            text-align: center;
+            font-size: 1.2em;
+            margin: 20px 0;
+        }
+
+        .progress {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4ecdc4, #44a08d);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .accessibility-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .accessibility-btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .accessibility-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .high-contrast {
+            background: #000000 !important;
+            color: #ffffff !important;
+        }
+
+        .high-contrast .rhythm-btn {
+            border: 3px solid #ffffff;
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .instructions h3 {
+            margin-bottom: 10px;
+            color: #FFD700;
+        }
+
+        .success-animation {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4em;
+            animation: celebrate 1s ease;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        @keyframes celebrate {
+            0% { transform: translate(-50%, -50%) scale(0) rotate(0deg); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1.2) rotate(180deg); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1) rotate(360deg); opacity: 0; }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .garden {
+                grid-template-columns: repeat(3, 1fr);
+                padding: 20px;
+            }
+            
+            .rhythm-panel {
+                min-width: auto;
+                width: 100%;
+            }
+            
+            .accessibility-panel {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin-bottom: 20px;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="accessibility-panel">
+        <button class="accessibility-btn" onclick="toggleHighContrast()" aria-label="Toggle high contrast mode">High Contrast</button>
+        <button class="accessibility-btn" onclick="toggleMute()" aria-label="Toggle sound">🔊 Sound</button>
+    </div>
+
+    <div class="container">
+        <header class="header">
+            <h1>🎵 Rhythm Garden 🌱</h1>
+            <p>Grow your musical garden by following the rhythm patterns!</p>
+        </header>
+
+        <div class="instructions">
+            <h3>How to Play:</h3>
+            <p>Listen to the pattern, then repeat it by clicking the colored buttons or using keys: <strong>Q W A S</strong></p>
+            <p>Each successful pattern grows a beautiful plant in your garden!</p>
+        </div>
+
+        <div class="game-area">
+            <div class="garden" id="garden">
+                <!-- Plant slots will be generated by JavaScript -->
+            </div>
+
+            <div class="rhythm-panel">
+                <div class="status">
+                    <div>Score: <span id="score">0</span> | Level: <span id="level">1</span></div>
+                    <div class="progress">
+                        <div class="progress-bar" id="progress"></div>
+                    </div>
+                    <div id="gameStatus">Press "Start New Pattern" to begin!</div>
+                </div>
+
+                <div class="rhythm-buttons">
+                    <button class="rhythm-btn btn-1" data-note="0" aria-label="Red button, note C">🎵</button>
+                    <button class="rhythm-btn btn-2" data-note="1" aria-label="Teal button, note E">🎶</button>
+                    <button class="rhythm-btn btn-3" data-note="2" aria-label="Blue button, note G">🎼</button>
+                    <button class="rhythm-btn btn-4" data-note="3" aria-label="Green button, note B">🎹</button>
+                </div>
+
+                <div class="controls">
+                    <button class="control-btn" id="playBtn" onclick="startNewPattern()">🎵 Start New Pattern</button>
+                    <button class="control-btn" id="replayBtn" onclick="replayPattern()" disabled>🔄 Replay Pattern</button>
+                    <button class="control-btn" onclick="resetGame()">🔄 Reset Game</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let gameState = {
+            score: 0,
+            level: 1,
+            currentPattern: [],
+            playerInput: [],
+            isPlaying: false,
+            isListening: false,
+            plants: 0,
+            isMuted: false,
+            timeoutIds: []
+        };
+
+        // Audio context for better sound control
+        let audioContext;
+        let gainNode;
+
+        // Initialize the game
+        function initGame() {
+            createGarden();
+            setupKeyboardControls();
+            setupAudioContext();
+            updateDisplay();
+        }
+
+        // Create the garden grid
+        function createGarden() {
+            const garden = document.getElementById('garden');
+            garden.innerHTML = '';
+            for (let i = 0; i < 15; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'plant-slot';
+                slot.id = `plant-${i}`;
+                garden.appendChild(slot);
+            }
+        }
+
+        // Setup audio context
+        function setupAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                gainNode = audioContext.createGain();
+                gainNode.connect(audioContext.destination);
+            }
+        }
+
+        // Play musical note
+        function playNote(frequency, duration = 0.3) {
+            if (gameState.isMuted || !audioContext) return;
+
+            try {
+                const oscillator = audioContext.createOscillator();
+                const noteGain = audioContext.createGain();
+
+                oscillator.connect(noteGain);
+                noteGain.connect(gainNode);
+
+                oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+                oscillator.type = 'sine';
+
+                noteGain.gain.setValueAtTime(0.3, audioContext.currentTime);
+                noteGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + duration);
+            } catch (error) {
+                console.log('Audio playback not available');
+            }
+        }
+
+        // Note frequencies (C, E, G, B)
+        const noteFrequencies = [261.63, 329.63, 392.00, 493.88];
+
+        // Setup keyboard controls
+        function setupKeyboardControls() {
+            document.addEventListener('keydown', (e) => {
+                if (!gameState.isListening) return;
+
+                const keyMap = {
+                    'q': 0, 'Q': 0,
+                    'w': 1, 'W': 1,
+                    'a': 2, 'A': 2,
+                    's': 3, 'S': 3
+                };
+
+                if (keyMap.hasOwnProperty(e.key)) {
+                    e.preventDefault();
+                    handleInput(keyMap[e.key]);
+                }
+            });
+        }
+
+        // Setup button click handlers
+        document.addEventListener('DOMContentLoaded', () => {
+            const buttons = document.querySelectorAll('.rhythm-btn');
+            buttons.forEach((btn, index) => {
+                btn.addEventListener('click', () => {
+                    if (gameState.isListening) {
+                        handleInput(index);
+                    }
+                });
+            });
+        });
+
+        // Handle player input
+        function handleInput(noteIndex) {
+            if (!gameState.isListening) return;
+
+            // Visual feedback
+            const btn = document.querySelector(`[data-note="${noteIndex}"]`);
+            btn.classList.add('active');
+            setTimeout(() => btn.classList.remove('active'), 300);
+
+            // Play sound
+            playNote(noteFrequencies[noteIndex]);
+
+            // Add to player input
+            gameState.playerInput.push(noteIndex);
+
+            // Check if pattern is complete
+            if (gameState.playerInput.length === gameState.currentPattern.length) {
+                checkPattern();
+            }
+        }
+
+        // Generate a new pattern
+        function generatePattern() {
+            const length = Math.min(3 + Math.floor(gameState.level / 2), 8);
+            gameState.currentPattern = [];
+            
+            for (let i = 0; i < length; i++) {
+                gameState.currentPattern.push(Math.floor(Math.random() * 4));
+            }
+        }
+
+        // Play the current pattern
+        function playPattern() {
+            gameState.isPlaying = true;
+            gameState.isListening = false;
+            document.getElementById('gameStatus').textContent = 'Listen to the pattern...';
+            
+            const playBtn = document.getElementById('playBtn');
+            const replayBtn = document.getElementById('replayBtn');
+            playBtn.disabled = true;
+            replayBtn.disabled = true;
+
+            // Clear any existing timeouts
+            gameState.timeoutIds.forEach(id => clearTimeout(id));
+            gameState.timeoutIds = [];
+
+            gameState.currentPattern.forEach((note, index) => {
+                const timeoutId = setTimeout(() => {
+                    const btn = document.querySelector(`[data-note="${note}"]`);
+                    btn.classList.add('active');
+                    playNote(noteFrequencies[note]);
+                    
+                    setTimeout(() => btn.classList.remove('active'), 300);
+                    
+                    if (index === gameState.currentPattern.length - 1) {
+                        setTimeout(() => {
+                            gameState.isPlaying = false;
+                            gameState.isListening = true;
+                            document.getElementById('gameStatus').textContent = 'Now repeat the pattern!';
+                            playBtn.disabled = false;
+                            replayBtn.disabled = false;
+                        }, 500);
+                    }
+                }, index * 600);
+                
+                gameState.timeoutIds.push(timeoutId);
+            });
+        }
+
+        // Check if player input matches pattern
+        function checkPattern() {
+            const correct = gameState.playerInput.every((note, index) => 
+                note === gameState.currentPattern[index]
+            );
+
+            if (correct) {
+                // Success!
+                gameState.score += gameState.level * 10;
+                growPlant();
+                showSuccess();
+                
+                // Level up every 3 successful patterns
+                if (gameState.plants % 3 === 0) {
+                    gameState.level++;
+                }
+                
+                setTimeout(() => {
+                    document.getElementById('gameStatus').textContent = 'Great job! Ready for the next pattern?';
+                }, 1500);
+            } else {
+                // Failed
+                document.getElementById('gameStatus').textContent = 'Oops! Try again or replay the pattern.';
+                playNote(150, 0.5); // Error sound
+            }
+
+            // Reset for next attempt
+            gameState.playerInput = [];
+            gameState.isListening = false;
+            updateDisplay();
+        }
+
+        // Grow a plant in the garden
+        function growPlant() {
+            const plantSlot = document.getElementById(`plant-${gameState.plants}`);
+            if (plantSlot) {
+                const stage = Math.min(3, Math.floor(gameState.plants / 5) + 1);
+                plantSlot.className = `plant-slot stage-${stage}`;
+                gameState.plants++;
+            }
+        }
+
+        // Show success animation
+        function showSuccess() {
+            const success = document.createElement('div');
+            success.className = 'success-animation';
+            success.textContent = '🌟';
+            document.body.appendChild(success);
+            
+            setTimeout(() => {
+                document.body.removeChild(success);
+            }, 1000);
+        }
+
+        // Start a new pattern
+        function startNewPattern() {
+            setupAudioContext(); // Ensure audio context is ready
+            generatePattern();
+            gameState.playerInput = [];
+            playPattern();
+        }
+
+        // Replay current pattern
+        function replayPattern() {
+            if (gameState.currentPattern.length > 0) {
+                gameState.playerInput = [];
+                playPattern();
+            }
+        }
+
+        // Reset the entire game
+        function resetGame() {
+            // Clear timeouts
+            gameState.timeoutIds.forEach(id => clearTimeout(id));
+            
+            gameState = {
+                score: 0,
+                level: 1,
+                currentPattern: [],
+                playerInput: [],
+                isPlaying: false,
+                isListening: false,
+                plants: 0,
+                isMuted: gameState.isMuted,
+                timeoutIds: []
+            };
+            
+            createGarden();
+            updateDisplay();
+            document.getElementById('gameStatus').textContent = 'Press "Start New Pattern" to begin!';
+        }
+
+        // Update score and level display
+        function updateDisplay() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('level').textContent = gameState.level;
+            
+            const progress = (gameState.plants % 15) / 15 * 100;
+            document.getElementById('progress').style.width = progress + '%';
+        }
+
+        // Toggle high contrast mode
+        function toggleHighContrast() {
+            document.body.classList.toggle('high-contrast');
+        }
+
+        // Toggle mute
+        function toggleMute() {
+            gameState.isMuted = !gameState.isMuted;
+            const btn = document.querySelector('[aria-label="Toggle sound"]');
+            btn.textContent = gameState.isMuted ? '🔇 Sound' : '🔊 Sound';
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', initGame);
+    </script>
+</body>
+</html>
