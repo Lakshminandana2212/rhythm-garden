@@ -27,6 +27,9 @@
 }
 
 body {
+
+    background-repeat: no-repeat;
+    background-size: cover;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: var(--primary-bg);
     min-height: 100vh;
