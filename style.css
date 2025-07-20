@@ -1,0 +1,551 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --card-bg: rgba(255, 255, 255, 0.15);
+    --card-border: rgba(255, 255, 255, 0.2);
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.8);
+    --success-color: #113712;
+    --error-color: #FF5252;
+    --accent-color: #092809;
+}
+
+.high-contrast {
+    --primary-bg: #000000;
+    --card-bg: #1a1a1a;
+    --card-border: #ffffff;
+    --text-primary: #ffffff;
+    --text-secondary: #cccccc;
+    --success-color: #00ff00;
+    --error-color: #ff0000;
+    --accent-color: #ffff00;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--primary-bg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    color: var(--text-primary);
+    overflow-x: hidden;
+    position: relative;
+}
+
+/* Floating particles background */
+.particles {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    animation: float 6s infinite ease-in-out;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0; }
+    50% { transform: translateY(-100px) rotate(180deg); opacity: 1; }
+}
+
+.container {
+    max-width: 100vw;
+    margin: 0 auto;
+    padding: 10px;
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 2;
+}
+
+.accessibility-panel {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    background: var(--card-bg);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    padding: 12px;
+    border-radius: 12px;
+    display: flex;
+    gap: 8px;
+    z-index: 1000;
+    border: 2px solid var(--card-border);
+}
+
+.accessibility-btn {
+    padding: 8px 12px;
+    border: 2px solid var(--card-border);
+    border-radius: 50%;
+    background: var(--card-bg);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 1.2em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.accessibility-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.accessibility-btn:focus {
+    outline: 3px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 20px;
+    padding: 20px 0;
+}
+
+.header h1 {
+    font-size: clamp(2rem, 5vw, 4rem);
+    margin-bottom: 8px;
+    text-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+    background: linear-gradient(45deg, #FFD700, #FFA500, #FF6B6B);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { filter: hue-rotate(0deg); }
+    50% { filter: hue-rotate(45deg); }
+}
+
+.header p {
+    font-size: clamp(1rem, 2vw, 1.3rem);
+    opacity: 0.9;
+    margin-bottom: 15px;
+}
+
+.game-layout {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 20px;
+    flex: 1;
+    align-items: start;
+}
+
+.garden-container {
+    background: var(--card-bg);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-radius: 20px;
+    padding: 25px;
+    border: 2px solid var(--card-border);
+    min-height: 500px;
+}
+
+.garden-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.garden-title {
+    font-size: 1.5em;
+    color: var(--accent-color);
+}
+
+.seed-selector {
+    display: flex;
+    gap: 10px;
+}
+
+.seed-btn {
+    width: 50px;
+    height: 50px;
+    border: 2px solid var(--card-border);
+    border-radius: 50%;
+    background: var(--card-bg);
+    font-size: 1.5em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff; /* Ensure emoji is visible */
+}
+
+.seed-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 5px 15px rgba(255, 215, 0, 0.3);
+}
+
+.seed-btn.selected {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+    transform: scale(1.05);
+}
+
+.garden {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 15px;
+    min-height: 400px;
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(139, 195, 74, 0.2));
+    border-radius: 15px;
+    padding: 20px;
+    border: 3px dashed var(--card-border);
+    position: relative;
+    justify-content: center;
+}
+
+.plant-slot {
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5em;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 2px solid rgba(76, 175, 80, 0.3);
+    position: relative;
+    cursor: pointer;
+}
+
+.plant-slot:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.plant-slot.planted {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.4), rgba(139, 195, 74, 0.4));
+    border-color: var(--success-color);
+    animation: plantGrow 0.8s ease-out;
+}
+
+@keyframes plantGrow {
+    0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+    50% { transform: scale(1.3) rotate(0deg); opacity: 0.7; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+.plant-slot::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    background: linear-gradient(45deg, transparent, rgba(255, 215, 0, 0.3), transparent);
+    border-radius: 20px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.plant-slot.planted::before {
+    opacity: 1;
+    animation: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+    0% { opacity: 0.3; }
+    100% { opacity: 0.7; }
+}
+
+.rhythm-panel {
+    background: var(--card-bg);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    padding: 35px;
+    border-radius: 20px;
+    border: 2px solid var(--card-border);
+    position: sticky;
+    top: 20px;
+}
+
+.status-section {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.score-display {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.score-item {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--card-border);
+}
+
+.score-label {
+    font-size: 0.8em;
+    opacity: 0.7;
+    margin-bottom: 5px;
+}
+
+.score-value {
+    font-size: 1.4em;
+    font-weight: bold;
+    color: var(--accent-color);
+}
+
+.progress-container {
+    margin: 15px 0;
+}
+
+.progress {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 15px;
+    height: 25px;
+    overflow: hidden;
+    position: relative;
+    border: 2px solid var(--card-border);
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--success-color), var(--accent-color));
+    width: 0%;
+    transition: width 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    position: relative;
+}
+
+.progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    animation: shine 2s infinite;
+}
+
+@keyframes shine {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+.game-status {
+    font-size: 1.1em;
+    font-weight: 600;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    border: 2px solid var(--card-border);
+    margin-bottom: 20px;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.rhythm-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin: 35px 0;
+}
+
+.rhythm-btn {
+    width: 90px;
+    height: 90px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 20px;
+    font-size: 2em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    position: relative;
+    overflow: hidden;
+    justify-self: center;
+}
+
+.rhythm-btn::before {
+    content: '';
+    position: absolute;
+}
+/* New animation for a 'click' effect */
+@keyframes buttonClickAnimation {
+  50% {
+    background: var(--accent-color);
+    color: #1a1a1a;
+    transform: scale(0.95);
+    box-shadow: 0 0 25px 5px var(--accent-color);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+/* Class to trigger the click animation */
+.rhythm-btn.is-playing {
+    animation: buttonClickAnimation 0.3s ease-in-out;
+}
+@keyframes muteGlowAnimation {
+  50% {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 25px var(--accent-color);
+    transform: scale(1.05);
+  }
+  100% {
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: none;
+    transform: scale(1);
+  }
+}
+
+/* Class to trigger the mute glow animation */
+.rhythm-btn.is-glowing {
+  animation: muteGlowAnimation 0.4s ease-in-out;
+}
+
+/* --- ENHANCED CONTROL BUTTONS --- */
+
+.controls {
+  gap: 15px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 15px;
+  border-top: 1px solid var(--card-border);
+}
+
+.control-btn {
+  border-radius: 10px;
+  font-weight: bold;
+  font-size: 0.9em;
+  padding: 12px 18px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.2s ease-in-out;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.control-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+.control-btn:active {
+  transform: translateY(0);
+  filter: brightness(0.9);
+}
+
+/* 🎵 Start Button - Primary Action */
+#playBtn {
+  background: linear-gradient(45deg, #28a745, #20c997);
+  box-shadow: 0 4px 15px -5px rgba(32, 201, 151, 0.6);
+}
+
+#playBtn:hover {
+  box-shadow: 0 4px 20px -2px rgba(32, 201, 151, 0.7);
+}
+
+
+/* 🔄 Replay Button - Secondary Action */
+#replayBtn {
+  background: linear-gradient(45deg, #007bff, #6f42c1);
+  box-shadow: 0 4px 15px -5px rgba(111, 66, 193, 0.6);
+}
+
+#replayBtn:hover {
+   box-shadow: 0 4px 20px -2px rgba(111, 66, 193, 0.7);
+}
+
+
+/* 🆕 New Game Button - Reset Action */
+.control-btn[onclick^='resetGame'] {
+  background: linear-gradient(45deg, #fd7e14, #dc3545);
+  box-shadow: 0 4px 15px -5px rgba(220, 53, 69, 0.6);
+}
+
+.control-btn[onclick^='resetGame']:hover {
+  box-shadow: 0 4px 20px -2px rgba(220, 53, 69, 0.7);
+}
+
+
+/* Disabled State */
+.control-btn:disabled {
+  background: rgba(0, 0, 0, 0.2);
+  box-shadow: none;
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+}
+
+
+/* Instructions Modal Overlay */
+.modal {
+    position: fixed; /* This is key: it makes the element an overlay */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85); /* Dark background to focus on the pop-up */
+    display: none; /* Hidden by default */
+    justify-content: center;
+    align-items: center;
+    z-index: 2000; /* Ensures it's on top of all other content */
+    padding: 20px;
+}
+
+/* The actual pop-up box */
+.modal-content {
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 30px;
+    border-radius: 20px;
+    border: 2px solid var(--card-border);
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+    /* Add a nice fade-in animation */
+    animation: modalFadeIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
