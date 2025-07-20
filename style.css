@@ -5,6 +5,8 @@
 }
 
 :root {
+    background-repeat: no-repeat;
+    background-size: cover;
     --primary-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     --card-bg: rgba(255, 255, 255, 0.15);
     --card-border: rgba(255, 255, 255, 0.2);
